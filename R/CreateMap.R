@@ -78,10 +78,16 @@ CreateMap <- R6Class(
     },
     
     drawMap = function(showLayer){
+      sout("~~~ Drawing Map ~~~")
       m <- leaflet(options=leafletOptions(zoomControl=FALSE),
                    width="50%") %>% setView(lng = -100, lat = 60, zoom = 3)%>%
         addTiles(group="basemap")
       for(i in 1:self$layers){
+        if(i==1){
+          initLayer = TRUE
+        } else {
+          initLayer = FALSE
+        }
         mapLayer <- self$mapDataList[[i]]
         pal <- leaflet::colorNumeric(
           mapLayer@pal,
@@ -103,7 +109,7 @@ CreateMap <- R6Class(
         mapLayer@regions$labels[nodata] = "No Data"
         layerId = sapply(1:length(prov2), function(x){paste0("group",i,x)})
         layerId2 = self$legendLabels[i]
-        print(layerId2)
+        sout(layerId2)
         m <- m %>% addPolygons(data=mapLayer@regions, opacity=0.5, fillOpacity=0.8, group=mapLayer@group,
                                color="white", weight=0.8, fillColor=~pal(Pop),layerId = layerId,
                                highlightOptions = highlightOptions(
@@ -113,32 +119,36 @@ CreateMap <- R6Class(
                     title = self$groups[i], group=self$groups[i],
                     opacity = 1, na.label="No Data", labFormat = myLabFormat(prefix=mapLayer@prefix,
                                                                              digits=mapLayer@digits),
-                    layerId=layerId2)
+                    layerId=layerId2, initLayer = initLayer)
         
         
       }
-      m <- m %>% addLayersControl(overlayGroups = c(self$groups),
-                                  options = layersControlOptions(collapsed=FALSE)) 
+      # m <- m %>% addLayersControl(overlayGroups = c(self$groups),
+      #                             options = layersControlOptions(collapsed=FALSE))
+      m <- m %>% addLayersControl(baseGroups = c(self$groups),
+                                  options = layersControlOptions(collapsed=FALSE))
       allLayers = seq(1,self$layers)
       hiddenLayers = allLayers[-showLayer]
       if(self$layers>1){m <- m %>% hideGroup(self$groups[hiddenLayers])}
       
-      #                 htmlwidgets::onRender("
-      #   function(el, x) {
-      #     // Navigate the map to the user's location
-      #     this.locate({setView: true});
-      #   }
-      # ")%>%
+            m<-m%>%          htmlwidgets::onRender("
+        function(el, x) {
+          // Navigate the map to the user's location
+          this.locate({setView: true});
+this.controls.remove(legend1);
+        }
+      ")
       #map.addLayer(console.log(e.layer));
       m <- m %>%
         htmlwidgets::onRender("
 function(el,x){
                   this.on('baselayerchange',
                          function (e) {
-
+                          e.console.log('LAYER HAS BEEN CHANGED.');
+e.layer.bringToBack();
                            this.locate({setView: true});
                            this.removeControl(legend1);
-                            legend2.addTo(this);
+                            legend2.addTo(map);
                          })}")
       
       return(m)

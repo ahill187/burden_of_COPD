@@ -20,7 +20,7 @@ library(knitr) #for markdown file
 library(htmltools)
 library(maps) # interactive map
 library(mapproj)
-library(leaflet)
+library(leaflet2)
 
 source("./R/Cost.R")
 source("./R/Census.R")
@@ -77,10 +77,10 @@ ui <- dashboardPage(skin=appLayout$dashboardColour,
     )
   ),
   # body
-  dashboardBody(
+  dashboardBody(asList=FALSE,
     shinyjs::useShinyjs(),
     
-    tabItems(
+    tabItems(asList=FALSE,
     
 
             # Tab tab1
@@ -258,17 +258,7 @@ server <- function(input, output, session) {
       sout(input$map_groups_baselayerchange)
       group = group[-which(group=="basemap")]
       print(length(group))
-      if(length(group)==1){
-        group_prev <<- group
-        print(group_prev)
-      }else{
-        group = c(setdiff(group_prev, group), setdiff(group, group_prev))
-        group_prev <<- group
-      }
-      g = which(mapSettings$groups!=group)
       
-      proxy = leafletProxy("map")
-      proxy %>% hideGroup(mapSettings$groups[g])
     }
     
     if(grepl("Graph",input$selectedTab)){
@@ -358,6 +348,7 @@ server <- function(input, output, session) {
           mapRender <- mapRender %>% htmlwidgets::onRender("function(el, x) {
                                                L.control.zoom({ position: 'topright' }).addTo(this)
         }") 
+
           mapRender
           
       })
@@ -372,15 +363,10 @@ server <- function(input, output, session) {
               mapSettings = mapSettings1
             } else {mapSettings = mapSettings2}
             group2 = input$map_groups
+            sout(group2)
             group2 = group2[-which(group2=="basemap")]
-            if(length(group2)!=1){
-              group_prev2 <<- group2
-            }else{
-              group2 = c(setdiff(group_prev2, group2), setdiff(group2, group_prev2))
-              group_prev2 <<- group2
-            }
-            sout("Group", group_prev2)
-            g2 = which(mapSettings$groups!=group_prev2)
+            g2 = which(mapSettings$groups==group2)
+            sout(g2)
             value$layer <- g2
             sout("Layer: ",value$layer)
           }
@@ -411,7 +397,7 @@ server <- function(input, output, session) {
           })
             groupid <- province()
 
-            
+          
               #layer <- as.numeric(substr(groupid, 6,6))
      
             
@@ -423,10 +409,11 @@ server <- function(input, output, session) {
           map$setupMap()
           cat("Creating map", fill=T)
           
-          sout(groupid)
+          sout("Group Id",groupid)
           
           prov <- as.numeric(substr(groupid,7,9))
-          print(prov)
+          sout("Province: ",prov)
+          sout("Layer: ", layer)
           mapLayer <- map$mapDataList[[layer]]
           print(mapLayer@costYear)
           totalBox = mapSettings$totalBox
